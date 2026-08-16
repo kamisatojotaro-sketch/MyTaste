@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useData } from './context/DataContext.jsx';
 import Navbar from './components/Header/Navbar.jsx';
 import Landing from './components/Landing/Landing.jsx';
@@ -13,6 +13,7 @@ import TemporalSection from './components/Dashboard/TemporalSection.jsx';
 import EngagementSection from './components/Dashboard/EngagementSection.jsx';
 import CrossPlatformSection from './components/Dashboard/CrossPlatformSection.jsx';
 import FunStatsSection from './components/Dashboard/FunStatsSection.jsx';
+import RecommendationsSection from './components/Dashboard/RecommendationsSection.jsx';
 import UploadModal from './components/Upload/UploadModal.jsx';
 import TutorialModal from './components/Tutorial/TutorialModal.jsx';
 import ExportCardModal from './components/Modals/ExportCardModal.jsx';
@@ -26,7 +27,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] flex flex-col">
+    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] flex flex-col antialiased">
       {/* Sticky Header Navbar */}
       <Navbar
         onOpenUpload={() => setIsUploadOpen(true)}
@@ -35,19 +36,19 @@ export default function App() {
         onOpenTutorial={() => setIsTutorialOpen(true)}
       />
 
-      {/* Main Content Router */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Main Content Area */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {viewMode === 'landing' || events.length === 0 ? (
           <Landing
             onOpenUpload={() => setIsUploadOpen(true)}
             onOpenTutorial={() => setIsTutorialOpen(true)}
           />
         ) : (
-          <div className="space-y-12">
+          <div className="space-y-12 pb-16">
             {/* Global Interactive Filter Bar */}
             <FilterBar />
 
-            {/* 9 Deep Dashboard Sections */}
+            {/* 10 Deep Dashboard Sections */}
             <OverviewSection stats={stats} />
             <ArtistsSection stats={stats} />
             <SongsSection stats={stats} />
@@ -57,6 +58,7 @@ export default function App() {
             <EngagementSection stats={stats} />
             <CrossPlatformSection stats={stats} />
             <FunStatsSection stats={stats} />
+            <RecommendationsSection stats={stats} />
           </div>
         )}
       </main>
@@ -64,7 +66,7 @@ export default function App() {
       {/* Footer */}
       <footer className="border-t border-[var(--border-color)] py-8 px-4 text-center text-xs text-[var(--text-muted)] font-mono space-y-1">
         <p>MyTaste — 100% Client-Side Music Intelligence & Recaps</p>
-        <p>Zero cloud storage • Built for Spotify, YouTube Music & Apple Music</p>
+        <p>Zero cloud storage • Spotify • YouTube Music • YouTube • Apple Music</p>
       </footer>
 
       {/* Wrapped-Style Full-Screen Story Mode */}
@@ -72,7 +74,7 @@ export default function App() {
         <StoryMode onClose={() => setViewMode('dashboard')} />
       )}
 
-      {/* Modals */}
+      {/* Modals with proper backdrop and centering */}
       <UploadModal
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
