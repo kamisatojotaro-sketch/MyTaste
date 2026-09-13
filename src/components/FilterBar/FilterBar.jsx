@@ -1,9 +1,17 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext.jsx';
-import { Filter, Calendar, SlidersHorizontal, Check } from 'lucide-react';
+import { Filter, Calendar, Check } from 'lucide-react';
 
 export default function FilterBar() {
   const { filters, setFilters, activeSources } = useData();
+  const [activePreset, setActivePreset] = useState('all');
+
+  // Sync active preset if date filters are reset externally
+  useEffect(() => {
+    if (!filters.startDate && !filters.endDate && activePreset !== 'all') {
+      setActivePreset('all');
+    }
+  }, [filters.startDate, filters.endDate, activePreset]);
 
   const togglePlatform = (platform) => {
     setFilters(prev => {
@@ -11,7 +19,7 @@ export default function FilterBar() {
       const exists = current.includes(platform);
       let next;
       if (exists) {
-        // Prevent disabling all
+        // Prevent disabling all platforms
         if (current.length === 1) return prev;
         next = current.filter(p => p !== platform);
       } else {
@@ -21,7 +29,8 @@ export default function FilterBar() {
     });
   };
 
-  const setTimePreset = (days) => {
+  const setTimePreset = (label, days) => {
+    setActivePreset(label);
     if (!days) {
       setFilters(prev => ({ ...prev, startDate: null, endDate: null }));
       return;
@@ -46,7 +55,7 @@ export default function FilterBar() {
             className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all flex items-center gap-1.5 ${
               filters.platforms?.includes('spotify')
                 ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 font-bold shadow-sm'
-                : 'bg-white/5 border-white/10 text-[var(--text-muted)] opacity-60'
+                : 'bg-white/5 border-white/10 text-[var(--text-muted)] opacity-60 hover:opacity-100 hover:bg-white/10'
             }`}
           >
             <span>🟢 Spotify</span>
@@ -58,7 +67,7 @@ export default function FilterBar() {
             className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all flex items-center gap-1.5 ${
               filters.platforms?.includes('youtube_music')
                 ? 'bg-red-500/15 border-red-500/40 text-red-400 font-bold shadow-sm'
-                : 'bg-white/5 border-white/10 text-[var(--text-muted)] opacity-60'
+                : 'bg-white/5 border-white/10 text-[var(--text-muted)] opacity-60 hover:opacity-100 hover:bg-white/10'
             }`}
           >
             <span>🔴 YT Music</span>
@@ -70,7 +79,7 @@ export default function FilterBar() {
             className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all flex items-center gap-1.5 ${
               filters.platforms?.includes('youtube')
                 ? 'bg-rose-500/15 border-rose-500/40 text-rose-400 font-bold shadow-sm'
-                : 'bg-white/5 border-white/10 text-[var(--text-muted)] opacity-60'
+                : 'bg-white/5 border-white/10 text-[var(--text-muted)] opacity-60 hover:opacity-100 hover:bg-white/10'
             }`}
           >
             <span>▶️ YouTube</span>
@@ -82,7 +91,7 @@ export default function FilterBar() {
             className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all flex items-center gap-1.5 ${
               filters.platforms?.includes('apple_music')
                 ? 'bg-pink-500/15 border-pink-500/40 text-pink-400 font-bold shadow-sm'
-                : 'bg-white/5 border-white/10 text-[var(--text-muted)] opacity-60'
+                : 'bg-white/5 border-white/10 text-[var(--text-muted)] opacity-60 hover:opacity-100 hover:bg-white/10'
             }`}
           >
             <span>🎵 Apple Music</span>
@@ -98,33 +107,45 @@ export default function FilterBar() {
           </span>
 
           <button
-            onClick={() => setTimePreset(null)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              !filters.startDate ? 'bg-white/15 text-white font-bold' : 'text-[var(--text-secondary)] hover:bg-white/5'
+            onClick={() => setTimePreset('all', null)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              activePreset === 'all'
+                ? 'bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] font-bold border border-[var(--accent-primary)]/30'
+                : 'text-[var(--text-secondary)] hover:bg-white/5 border border-transparent'
             }`}
           >
             All-Time
           </button>
 
           <button
-            onClick={() => setTimePreset(30)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              filters.startDate ? 'bg-white/15 text-white font-bold' : 'text-[var(--text-secondary)] hover:bg-white/5'
+            onClick={() => setTimePreset('30d', 30)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              activePreset === '30d'
+                ? 'bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] font-bold border border-[var(--accent-primary)]/30'
+                : 'text-[var(--text-secondary)] hover:bg-white/5 border border-transparent'
             }`}
           >
             Last 30d
           </button>
 
           <button
-            onClick={() => setTimePreset(90)}
-            className="px-2.5 py-1 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:bg-white/5 transition-all"
+            onClick={() => setTimePreset('90d', 90)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              activePreset === '90d'
+                ? 'bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] font-bold border border-[var(--accent-primary)]/30'
+                : 'text-[var(--text-secondary)] hover:bg-white/5 border border-transparent'
+            }`}
           >
             Last 90d
           </button>
 
           <button
-            onClick={() => setTimePreset(365)}
-            className="px-2.5 py-1 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:bg-white/5 transition-all"
+            onClick={() => setTimePreset('1y', 365)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              activePreset === '1y'
+                ? 'bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] font-bold border border-[var(--accent-primary)]/30'
+                : 'text-[var(--text-secondary)] hover:bg-white/5 border border-transparent'
+            }`}
           >
             1 Year
           </button>

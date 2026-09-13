@@ -1,5 +1,7 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useData } from './context/DataContext.jsx';
+import GrainOverlay from './components/Effects/GrainOverlay.jsx';
+import AuroraBackground from './components/Effects/AuroraBackground.jsx';
 import Navbar from './components/Header/Navbar.jsx';
 import Landing from './components/Landing/Landing.jsx';
 import StoryMode from './components/StoryMode/StoryMode.jsx';
@@ -28,41 +30,58 @@ export default function App() {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  const hasEvents = events && events.length > 0;
+
   return (
-    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] flex flex-col antialiased">
-      {/* Sticky Header Navbar */}
-      <Navbar
-        onOpenConnect={() => setIsConnectOpen(true)}
-        onOpenExport={() => setIsExportOpen(true)}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenTutorial={() => setIsTutorialOpen(true)}
-      />
+    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] antialiased relative">
+      {/* Root Atmospheric Effects */}
+      <AuroraBackground />
+      <GrainOverlay />
 
-      {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-12 pb-16">
-          {/* Global Interactive Filter Bar */}
-          <FilterBar />
+      {/* Main Wrapper sitting above the Aurora background */}
+      <div className="relative z-10 flex flex-col min-h-screen">
+        {/* Sticky Header Navbar */}
+        <Navbar
+          onOpenConnect={() => setIsConnectOpen(true)}
+          onOpenExport={() => setIsExportOpen(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenTutorial={() => setIsTutorialOpen(true)}
+        />
 
-          {/* 10 Deep Dashboard Sections */}
-          <OverviewSection stats={stats} />
-          <ArtistsSection stats={stats} />
-          <SongsSection stats={stats} />
-          <AlbumsSection stats={stats} />
-          <GenreSection stats={stats} />
-          <TemporalSection stats={stats} />
-          <EngagementSection stats={stats} />
-          <CrossPlatformSection stats={stats} />
-          <FunStatsSection stats={stats} />
-          <RecommendationsSection stats={stats} />
-        </div>
-      </main>
+        {/* Conditional Content: Landing when no events, Dashboard when events present */}
+        {!hasEvents ? (
+          <Landing
+            onOpenConnect={() => setIsConnectOpen(true)}
+            onOpenUpload={() => setIsUploadOpen(true)}
+            onOpenTutorial={() => setIsTutorialOpen(true)}
+          />
+        ) : (
+          <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="space-y-12 pb-16">
+              {/* Global Interactive Filter Bar */}
+              <FilterBar />
 
-      {/* Footer */}
-      <footer className="border-t border-[var(--border-color)] py-8 px-4 text-center text-xs text-[var(--text-muted)] font-mono space-y-1">
-        <p>MyTaste — 100% Client-Side Music Intelligence & Recaps</p>
-        <p>Direct Connection • Spotify • YouTube Music • YouTube • Apple Music</p>
-      </footer>
+              {/* 10 Deep Dashboard Sections */}
+              <OverviewSection stats={stats} />
+              <ArtistsSection stats={stats} />
+              <SongsSection stats={stats} />
+              <AlbumsSection stats={stats} />
+              <GenreSection stats={stats} />
+              <TemporalSection stats={stats} />
+              <EngagementSection stats={stats} />
+              <CrossPlatformSection stats={stats} />
+              <FunStatsSection stats={stats} />
+              <RecommendationsSection stats={stats} />
+            </div>
+          </main>
+        )}
+
+        {/* Footer */}
+        <footer className="border-t border-[var(--border-color)] py-8 px-4 text-center text-xs text-[var(--text-muted)] font-mono space-y-1">
+          <p>MyTaste — 100% Client-Side Music Intelligence & Recaps</p>
+          <p>Direct Connection • Spotify • YouTube Music • YouTube • Apple Music</p>
+        </footer>
+      </div>
 
       {/* Wrapped-Style Full-Screen Story Mode */}
       {viewMode === 'story' && (

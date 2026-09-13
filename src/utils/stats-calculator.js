@@ -257,6 +257,53 @@ export function computeMusicStats(events, filters = {}) {
     .map(([decade, count]) => ({ decade, count, percent: Math.round((count / filtered.length) * 100) }))
     .sort((a, b) => b.count - a.count);
 
+  // Listening Endurance & Continuous Session Analysis (20-min inactivity timeout)
+  let sessionCount = 0;
+  let totalSessionMs = 0;
+  let maxSessionMs = 0;
+  let maxSessionTracks = 0;
+
+  if (filtered.length > 0) {
+    const sortedChronological = [...filtered].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    const SESSION_TIMEOUT_MS = 20 * 60 * 1000;
+    let curTracks = 0;
+    let curMs = 0;
+    let curEnd = 0;
+
+    for (let i = 0; i < sortedChronological.length; i++) {
+      const ev = sortedChronological[i];
+      const start = new Date(ev.timestamp).getTime();
+      const dur = ev.durationMs || 210000;
+
+      if (curEnd === 0 || (start - curEnd) > SESSION_TIMEOUT_MS) {
+        if (curTracks > 0) {
+          sessionCount++;
+          totalSessionMs += curMs;
+          if (curMs > maxSessionMs) maxSessionMs = curMs;
+          if (curTracks > maxSessionTracks) maxSessionTracks = curTracks;
+        }
+        curTracks = 1;
+        curMs = dur;
+        curEnd = start + dur;
+      } else {
+        curTracks++;
+        curMs += dur;
+        curEnd = Math.max(curEnd, start + dur);
+      }
+    }
+    if (curTracks > 0) {
+      sessionCount++;
+      totalSessionMs += curMs;
+      if (curMs > maxSessionMs) maxSessionMs = curMs;
+      if (curTracks > maxSessionTracks) maxSessionTracks = curTracks;
+    }
+  }
+
+  const validSessions = Math.max(1, sessionCount);
+  const avgSessionMinutes = Math.max(1, Math.round((totalSessionMs / validSessions) / 60000));
+  const avgTracksPerSession = Number((filtered.length / validSessions).toFixed(1));
+  const longestSessionMinutes = Math.round(maxSessionMs / 60000);
+
   return {
     totalMinutes: Math.round(totalMs / 60000),
     totalHours: (totalMs / (1000 * 60 * 60)).toFixed(1),
@@ -264,6 +311,7 @@ export function computeMusicStats(events, filters = {}) {
     totalStreams: filtered.length,
     uniqueArtists: uniqueArtistCount,
     uniqueTracks: allTracks.length,
+    uniqueSongs: allTracks.length,
     uniqueAlbums: allAlbums.length,
     biggestDay: {
       date: biggestDay.date,
@@ -274,10 +322,14 @@ export function computeMusicStats(events, filters = {}) {
       current: currentStreak,
       longest: longestStreak
     },
+    currentStreak: currentStreak,
     platformSplit: platformCounts,
+    platformBreakdown: platformCounts,
     topArtistsByPlays,
     topArtistsByDuration,
     topTracks,
+    topTracksByPlays: topTracks,
+    obsessionPeak: obsessedSong,
     topAlbums,
     genres: Array.from(genreMap.entries()).map(([genre, count]) => ({ genre, count })).sort((a, b) => b.count - a.count),
     hourlyDistribution: hourMap,
@@ -289,6 +341,13 @@ export function computeMusicStats(events, filters = {}) {
       skipRate: totalEvaluatedSkips > 0 ? Math.round((totalSkips / totalEvaluatedSkips) * 100) : null,
       shufflePercent: totalEvaluatedShuffle > 0 ? Math.round((totalShufflePlays / totalEvaluatedShuffle) * 100) : null,
       completionRate: totalEvaluatedSkips > 0 ? 100 - Math.round((totalSkips / totalEvaluatedSkips) * 100) : null
+    },
+    endurance: {
+      avgSessionMinutes,
+      avgTracksPerSession,
+      totalSessions: sessionCount,
+      longestSessionMinutes,
+      longestSessionTracks: maxSessionTracks
     },
     funStats: {
       obsessedSong,
