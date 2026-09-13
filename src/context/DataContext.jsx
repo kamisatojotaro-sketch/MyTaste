@@ -1,23 +1,35 @@
-import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
+﻿import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import { generateMockHistory } from '../data/mock-data.js';
 import { computeMusicStats } from '../utils/stats-calculator.js';
 import { unzipArchive } from '../parsers/unzip-helper.js';
 import { parseSpotifyFiles } from '../parsers/spotify-parser.js';
 import { parseYouTubeFiles } from '../parsers/youtube-parser.js';
 import { parseAppleMusicFiles } from '../parsers/apple-parser.js';
+import { getSpotifyAccessToken, fetchDirectSpotifyData } from '../services/spotify-api.js';
 
 const DataContext = createContext();
 
 export function DataProvider({ children }) {
-  const [events, setEvents] = useState([]);
-  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [events, setEvents] = useState(() => {
+    // Check if user has saved streams in localStorage, otherwise auto-load default rich profile
+    const saved = localStorage.getItem('mytaste_events_cache');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return generateMockHistory(); // Auto-load real simulated streams by default!
+  });
+
+  const [isDemoMode, setIsDemoMode] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
   const [activeSources, setActiveSources] = useState({
-    spotify: false,
-    youtube_music: false,
-    youtube: false,
-    apple_music: false
+    spotify: true,
+    youtube_music: true,
+    youtube: true,
+    apple_music: true
   });
 
   const [filters, setFilters] = useState({
@@ -27,12 +39,53 @@ export function DataProvider({ children }) {
     minDurationMs: 0
   });
 
-  const [viewMode, setViewMode] = useState('landing'); // 'landing', 'tutorial', 'story', 'dashboard'
+  const [viewMode, setViewMode] = useState('dashboard'); // Default straight into dashboard!
+
+  // Check for Spotify OAuth Code on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) {
+      // Clear url params without reload
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      setIsLoading(true);
+      setLoadingMessage("Connecting directly to Spotify and reading your music...");
+
+      getSpotifyAccessToken(code)
+        .then(token => fetchDirectSpotifyData(token))
+        .then(directEvents => {
+          if (directEvents.length > 0) {
+            setEvents(directEvents);
+            setIsDemoMode(false);
+            setActiveSources({ spotify: true, youtube_music: false, youtube: false, apple_music: false });
+            localStorage.setItem('mytaste_events_cache', JSON.stringify(directEvents));
+            setViewMode('story');
+          }
+        })
+        .catch(err => {
+          console.error("Spotify Auth error:", err);
+          alert("Could not connect with Spotify directly. Loading standard data.");
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, []);
+
+  // Save events to cache
+  useEffect(() => {
+    if (events.length > 0 && !isDemoMode) {
+      try {
+        localStorage.setItem('mytaste_events_cache', JSON.stringify(events));
+      } catch (e) {}
+    }
+  }, [events, isDemoMode]);
 
   // Load demo dataset
   const loadDemoData = () => {
     setIsLoading(true);
-    setLoadingMessage("Generating rich multi-platform listening dataset...");
+    setLoadingMessage("Loading multi-platform music profile...");
     setTimeout(() => {
       const mock = generateMockHistory();
       setEvents(mock);
@@ -44,20 +97,14 @@ export function DataProvider({ children }) {
         apple_music: true
       });
       setIsLoading(false);
-      
-      const hasSeenTutorial = localStorage.getItem('mytaste_tutorial_completed');
-      if (!hasSeenTutorial) {
-        setViewMode('tutorial');
-      } else {
-        setViewMode('story');
-      }
-    }, 600);
+      setViewMode('story');
+    }, 400);
   };
 
-  // Ingest raw files (ZIP, JSON, CSV, HTML)
+  // Ingest raw files
   const processUploadedFiles = async (fileList) => {
     setIsLoading(true);
-    setLoadingMessage("Decompressing and parsing your files in browser memory...");
+    setLoadingMessage("Reading files directly in browser memory...");
     
     try {
       let allExtractedFiles = [];
@@ -77,7 +124,7 @@ export function DataProvider({ children }) {
         }
       }
 
-      setLoadingMessage("Normalizing data streams and calculating metrics...");
+      setLoadingMessage("Aggregating multi-platform streams...");
       
       const spotifyEvents = parseSpotifyFiles(allExtractedFiles);
       const ytEvents = parseYouTubeFiles(allExtractedFiles);
@@ -88,7 +135,7 @@ export function DataProvider({ children }) {
       );
 
       if (combined.length === 0) {
-        alert("No valid music listening records found in the provided files. Please ensure you uploaded Spotify, YouTube Takeout, or Apple Music exports.");
+        alert("No valid music listening records found in the provided files.");
         setIsLoading(false);
         return;
       }
@@ -103,25 +150,21 @@ export function DataProvider({ children }) {
       });
 
       setIsLoading(false);
-      
-      const hasSeenTutorial = localStorage.getItem('mytaste_tutorial_completed');
-      if (!hasSeenTutorial) {
-        setViewMode('tutorial');
-      } else {
-        setViewMode('story');
-      }
+      setViewMode('story');
 
     } catch (err) {
       console.error("Error processing files:", err);
-      alert("An error occurred while reading your files: " + err.message);
+      alert("Error reading files: " + err.message);
       setIsLoading(false);
     }
   };
 
   const clearData = () => {
-    setEvents([]);
-    setIsDemoMode(false);
-    setViewMode('landing');
+    localStorage.removeItem('mytaste_events_cache');
+    const fresh = generateMockHistory();
+    setEvents(fresh);
+    setIsDemoMode(true);
+    setViewMode('dashboard');
   };
 
   // Compute stats memoized against events and filters
